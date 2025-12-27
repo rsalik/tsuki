@@ -7,6 +7,7 @@ from typing import Any
 class BlockSettings:
     pass
 
+
 @dataclass
 class Block:
 
@@ -49,6 +50,3 @@ class IntBlock:
 
     def forward(self, x):
         raise NotImplementedError
-
-        
-

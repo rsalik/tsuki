@@ -11,8 +11,15 @@ def historical(cls):
         )
     return cls
 
+
 def not_last(cls):
     """Decorator to mark a Block as not being the last block in a model."""
 
     cls._block_not_last = True
+    return cls
+
+
+def conv(cls):
+    """Decorator to mark a Block as treating input and output dimensions as channels."""
+    cls._is_conv_block = True
     return cls

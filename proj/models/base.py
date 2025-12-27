@@ -1,4 +1,5 @@
 from ..blocks.base import Block, IntBlock
+
 # from blocks.history import HistoryWrapper, HistoryWrapperSettings  # removed: using a torch-native utility instead
 from ..envs.base import Env
 
@@ -20,6 +21,7 @@ class HistoryConcat(nn.Module):
 
     Note: If batch size changes between calls, the buffer is reset.
     """
+
     def __init__(self, in_dim: int, history_length: int):
         super().__init__()
         self.in_dim = in_dim
@@ -39,14 +41,18 @@ class HistoryConcat(nn.Module):
         needed = self.history_length - len(items)
         if needed > 0:
             if like.dim() == 2:
-                pad = like.new_zeros(needed, like.size(0), like.size(1))  # [needed, B, D]
+                pad = like.new_zeros(
+                    needed, like.size(0), like.size(1)
+                )  # [needed, B, D]
             elif like.dim() == 1:
                 pad = like.new_zeros(needed, like.size(0))  # [needed, D]
             else:
-                raise ValueError(f"HistoryConcat expects 1D or 2D tensors, got shape {tuple(like.shape)}")
+                raise ValueError(
+                    f"HistoryConcat expects 1D or 2D tensors, got shape {tuple(like.shape)}"
+                )
             items = [*pad, *items]  # type: ignore[list-item]
         # Now select the last exactly history_length
-        items = items[-self.history_length:]
+        items = items[-self.history_length :]
 
         if like.dim() == 2:
             # items: list of [B, D] -> cat along last dim to [B, D*k]
@@ -63,7 +69,9 @@ class HistoryConcat(nn.Module):
         if x.dim() == 2:
             bsz, d = x.shape
             if d != self.in_dim:
-                raise ValueError(f"HistoryConcat expected feature dim {self.in_dim}, got {d}")
+                raise ValueError(
+                    f"HistoryConcat expected feature dim {self.in_dim}, got {d}"
+                )
             if self._last_batch is None:
                 self._last_batch = bsz
             elif self._last_batch != bsz:
@@ -72,7 +80,9 @@ class HistoryConcat(nn.Module):
                 self._last_batch = bsz
         else:
             if x.numel() != self.in_dim:
-                raise ValueError(f"HistoryConcat expected vector of dim {self.in_dim}, got {x.numel()}")
+                raise ValueError(
+                    f"HistoryConcat expected vector of dim {self.in_dim}, got {x.numel()}"
+                )
 
         # Compose a history list including current x, with past entries detached
         past = [t.detach() for t in self._buffer]
@@ -95,6 +105,7 @@ class _IntBlockAdapter(nn.Module):
     Adapter to make a non-nn.Module IntBlock look like an nn.Module,
     and to register any nested torch Modules/Parameters so optimizers can find them.
     """
+
     def __init__(self, int_block: IntBlock):
         super().__init__()
         self.block = int_block
@@ -150,8 +161,18 @@ class _IntBlockAdapter(nn.Module):
         return self.block.forward(x)
 
 
+class Network:
+    """A network is simply a wrapper for a sequence of blocks."""
+
+    blocks: list[Block]
+
+    def __init__(self, blocks: list[Block]):
+        self.blocks = blocks
+
+
 class Model(nn.Module):
     """A model composed of a sequence of blocks."""
+
     internal_blocks: nn.ModuleList
     env_name: str
 
@@ -168,23 +189,33 @@ class Model(nn.Module):
         self.internal_blocks = nn.ModuleList(modules)
 
     @classmethod
-    def from_blocks(cls, blocks: list[Block], env: Env) -> "Model":
+    def from_blocks(cls, blocks: list[Block | Network], env: Env) -> "Model":
         """Create a model from a list of blocks."""
         internal_blocks: list[IntBlock | nn.Module] = []
         current_in_dim = env.obs_dim + env.action_dim
 
-        for (i, block) in enumerate(blocks):
+        # Convert networks to blocks
+        true_blocks: list[Block] = []
+        for block in blocks:
+            if isinstance(block, Network):
+                true_blocks.extend(block.blocks)
+            else:
+                true_blocks.append(block)
+
+        for i, block in enumerate(true_blocks):
             # Last block must output in the prediction space
             out_dim = None
-            if (i == len(blocks) - 1):
-                if (getattr(block, "_block_not_last", False)):
+            if i == len(true_blocks) - 1:
+                if getattr(block, "_block_not_last", False):
                     raise ValueError("Last block in model cannot be a not_last block.")
                 out_dim = env.obs_dim
 
             # If the block needs history, insert a torch-native history feature block first
-            if (getattr(block, "_block_takes_history", False)):
+            if getattr(block, "_block_takes_history", False):
                 history_length = int(getattr(block, "history_length"))
-                hist_module = HistoryConcat(in_dim=current_in_dim, history_length=history_length)
+                hist_module = HistoryConcat(
+                    in_dim=current_in_dim, history_length=history_length
+                )
                 internal_blocks.append(hist_module)
                 current_in_dim = hist_module.out_dim  # type: ignore[attr-defined]
 
@@ -195,7 +226,9 @@ class Model(nn.Module):
             # Propagate dimensionality for the next block
             next_out_dim = getattr(internal_block, "out_dim", None)
             if next_out_dim is None:
-                raise AttributeError(f"Internal block {type(internal_block).__name__} must define out_dim")
+                raise AttributeError(
+                    f"Internal block {type(internal_block).__name__} must define out_dim"
+                )
             current_in_dim = next_out_dim
 
         model = cls(internal_blocks, env.name)  # type: ignore
@@ -205,7 +238,7 @@ class Model(nn.Module):
         for internal_block in self.internal_blocks:
             x = internal_block(x)  # works for nn.Module and adapter
         return x
-    
+
     def reset(self) -> None:
         """Reset any internal stateful blocks (e.g., history buffers)."""
         for internal_block in self.internal_blocks:

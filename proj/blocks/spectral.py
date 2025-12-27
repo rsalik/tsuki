@@ -36,22 +36,24 @@ class SpectralBlock(Block):
         # in_dim at this point is already multiplied by history_length from HistoryConcat
         # So we need to recover the original feature dimension
         original_dim = in_dim // self.settings.spectral_history_length
-        
+
         internal_block.filters = get_filters(
             self.settings.spectral_history_length, self.settings.num_filters
         )  # (spectral_history_length, num_filters)
-        
+
         internal_block.original_dim = original_dim
         internal_block.history_length = self.settings.spectral_history_length
 
         # Learn a linear layer to map from spectral features to output dimension
         internal_block.out_dim = out_dim
-        internal_block.linear = nn.Linear(self.settings.num_filters * original_dim, out_dim)
+        internal_block.linear = nn.Linear(
+            self.settings.num_filters * original_dim, out_dim
+        )
 
     def forward(self, internal_block, x):
         # x comes from HistoryConcat with shape (batch, history_length * original_dim) or (history_length * original_dim,)
         # We need to reshape it to (history_length, original_dim) or (batch, history_length, original_dim)
-        
+
         if x.dim() == 1:
             # Shape: (history_length * original_dim,) -> (history_length, original_dim)
             x = x.reshape(internal_block.history_length, internal_block.original_dim)
@@ -62,7 +64,9 @@ class SpectralBlock(Block):
         else:
             # Shape: (batch, history_length * original_dim) -> (batch, history_length, original_dim)
             batch_size = x.shape[0]
-            x = x.reshape(batch_size, internal_block.history_length, internal_block.original_dim)
+            x = x.reshape(
+                batch_size, internal_block.history_length, internal_block.original_dim
+            )
             # Apply spectral filters: (num_filters, history_length) @ (batch, history_length, original_dim) -> (batch, num_filters, original_dim)
             spectral_features = torch.einsum("fh,bhd->bfd", internal_block.filters.T, x)
             # Flatten: (batch, num_filters, original_dim) -> (batch, num_filters * original_dim)

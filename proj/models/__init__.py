@@ -1,5 +1,3 @@
-from .base import Model
+from .base import Model, Network
 
-__all__ = [
-    "Model",
-]
+__all__ = ["Model", "Network"]
