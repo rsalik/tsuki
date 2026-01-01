@@ -88,8 +88,26 @@ if [[ "$PYTHON_MAJOR" -lt 3 ]] || [[ "$PYTHON_MAJOR" -eq 3 && "$PYTHON_MINOR" -l
     exit 1
 fi
 
-echo -e "${GREEN}Creating virtual environment: ${VENV_NAME}${NC}"
-$PYTHON_CMD -m venv $VENV_NAME
+# Check if venv exists and has correct Python version
+if [ -d "$VENV_NAME" ]; then
+    VENV_PYTHON_VERSION=$($VENV_NAME/bin/python --version 2>&1 | cut -d' ' -f2 || echo "0.0.0")
+    VENV_MAJOR=$(echo $VENV_PYTHON_VERSION | cut -d'.' -f1)
+    VENV_MINOR=$(echo $VENV_PYTHON_VERSION | cut -d'.' -f2)
+    
+    if [[ "$VENV_MAJOR" -lt 3 ]] || [[ "$VENV_MAJOR" -eq 3 && "$VENV_MINOR" -lt 11 ]]; then
+        echo -e "${YELLOW}Existing venv has Python $VENV_PYTHON_VERSION (need 3.11+). Removing...${NC}"
+        rm -rf "$VENV_NAME"
+    else
+        echo -e "${GREEN}Existing venv has Python $VENV_PYTHON_VERSION. Reusing.${NC}"
+    fi
+fi
+
+# Create venv if it doesn't exist
+if [ ! -d "$VENV_NAME" ]; then
+    echo -e "${GREEN}Creating virtual environment: ${VENV_NAME}${NC}"
+    $PYTHON_CMD -m venv $VENV_NAME
+fi
+
 source $VENV_NAME/bin/activate
 
 # Upgrade pip
