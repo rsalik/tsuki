@@ -41,31 +41,17 @@ if [[ "$ENV_TYPE" == "cluster" ]]; then
     
     # Princeton Della/Tiger cluster modules
     if command -v module &> /dev/null; then
-        # Try to load Python 3.12 first, then 3.11
-        if module avail python/3.12 2>&1 | grep -q "python/3.12"; then
-            module load python/3.12
-            echo -e "${GREEN}Loaded Python 3.12 module${NC}"
-        elif module avail anaconda3/2024 2>&1 | grep -q "anaconda3"; then
-            module load anaconda3/2024.10
-            echo -e "${GREEN}Loaded Anaconda 2024.10 module${NC}"
-        elif module avail python/3.11 2>&1 | grep -q "python/3.11"; then
-            module load python/3.11
-            echo -e "${GREEN}Loaded Python 3.11 module${NC}"
-        else
-            echo -e "${YELLOW}Warning: Could not find Python 3.11+ module.${NC}"
-            echo -e "${YELLOW}Available Python modules:${NC}"
-            module avail python 2>&1 | head -20
-            echo ""
-            echo -e "${RED}Please load a Python 3.11+ module manually and re-run.${NC}"
-            echo -e "${RED}Example: module load anaconda3/2024.10${NC}"
-            exit 1
-        fi
+        # Load Anaconda (has Python 3.11+)
+        echo -e "${GREEN}Loading anaconda3/2024.10...${NC}"
+        module load anaconda3/2024.10
         
-        # Also load CUDA module
-        if module avail cudatoolkit/12 2>&1 | grep -q "cudatoolkit"; then
-            module load cudatoolkit/12.4
-            echo -e "${GREEN}Loaded CUDA 12.4 module${NC}"
+        # Load CUDA toolkit if available
+        if module avail cudatoolkit 2>&1 | grep -q "cudatoolkit"; then
+            module load cudatoolkit/12.4 2>/dev/null || module load cudatoolkit 2>/dev/null || true
+            echo -e "${GREEN}Loaded CUDA module${NC}"
         fi
+    else
+        echo -e "${YELLOW}Warning: module command not found. Assuming Python 3.11+ is available.${NC}"
     fi
 fi
 
