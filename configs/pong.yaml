@@ -1,0 +1,42 @@
+# World Model Training Configuration
+# Pong - Default settings
+
+# Dataset settings
+dataset:
+  game: "pong"
+  dataset_type: "mixed" # mixed, medium, or expert
+  sequence_length: 16
+  frame_stack: 4
+
+# Model architecture
+model:
+  num_channels: 64
+  num_blocks: 2
+  action_space_size: 6 # Pong has 6 actions
+  spatial_size: 5 # 84 // 16 ≈ 5
+
+# Training settings
+training:
+  batch_size: 32
+  num_epochs: 100
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  num_workers: 4
+  device: "cuda"
+
+# Loss weights
+loss:
+  latent_weight: 1.0
+  reconstruction_weight: 0.5
+  reward_weight: 1.0
+
+# Checkpointing
+checkpoint:
+  save_path: "checkpoints/pong_world_model.pt"
+  save_interval: 10 # epochs
+  print_interval: 100 # batches
+
+# Logging
+logging:
+  log_dir: "logs/"
+  experiment_name: "pong_world_model"
