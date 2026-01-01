@@ -7,10 +7,11 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --mail-type=end
+#SBATCH --mail-type=begin,end
 #SBATCH --mail-user=rs3216@princeton.edu
 #SBATCH --gres=gpu:1
-#SBATCH --partition=gpu
+#SBATCH --partition=pli
+#SBATCH --account=eladgroup
 
 # ============================================
 # World Model Training - SLURM Job Script
